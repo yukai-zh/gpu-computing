@@ -1,0 +1,7 @@
+blocks_per_grid,bandwidth_gbps
+1,bw=918.51
+2,bw=1082.84
+4,bw=1061.75
+8,bw=1093.35
+16,bw=1038.93
+32,bw=1181.52

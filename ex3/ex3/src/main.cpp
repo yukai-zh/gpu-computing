@@ -116,7 +116,7 @@ main ( int argc, char * argv[] )
         std::cout << "*** Ignoring size parameter; using kernel launch parameters and stride, size=" << optMemorySize << std::endl;
     } else if ( chCommandLineGetBool("global-offset", argc, argv) ) {
         // determine memory size from kernel launch parameters and stride
-        optMemorySize = optGridSize * optBlockSize + optOffset * sizeof optMemorySize;
+        optMemorySize = (optGridSize * optBlockSize + optOffset) * sizeof optMemorySize;
         std::cout << "*** Ignoring size parameter; using kernel launch parameters and offset, size=" << optMemorySize << std::endl; 
     } else {
         // determine memory size from parameters
@@ -143,6 +143,8 @@ main ( int argc, char * argv[] )
     } else { // Pinned
         std::cout << "***" << " Using pinned memory" << std::endl;
         // Allocation of pinned host memory
+        cudaMallocHost	(	(void **) &h_memoryA, static_cast <size_t>  	( optMemorySize )	 );
+        cudaMallocHost	(	(void **) &h_memoryB, static_cast <size_t>  	( optMemorySize )	 );
     }
 
     //
@@ -173,6 +175,7 @@ main ( int argc, char * argv[] )
     memCpyH2DTimer.start ();
     for ( int i = 0; i < optMemCpyIterations; i ++ ) {
         // H2D copy
+        cudaMemcpy(d_memoryA, h_memoryA, optMemorySize, cudaMemcpyHostToDevice);
     }
     memCpyH2DTimer.stop ();
 
@@ -180,6 +183,7 @@ main ( int argc, char * argv[] )
     memCpyD2DTimer.start ();
     for ( int i = 0; i < optMemCpyIterations; i ++ ) {
         // D2D copy
+        cudaMemcpy(d_memoryB, d_memoryA, optMemorySize, cudaMemcpyDeviceToDevice);
     }
     memCpyD2DTimer.stop ();
 
@@ -187,6 +191,7 @@ main ( int argc, char * argv[] )
     memCpyD2HTimer.start ();
     for ( int i = 0; i < optMemCpyIterations; i ++ ) {
         // D2H copy
+        cudaMemcpy(h_memoryA, d_memoryA, optMemorySize, cudaMemcpyDeviceToHost);
     }
     memCpyD2HTimer.stop ();
 
@@ -202,7 +207,6 @@ main ( int argc, char * argv[] )
 
         return -1;
     }
-
     //
     // Global Memory Tests
     //
@@ -212,12 +216,12 @@ main ( int argc, char * argv[] )
         // Launch Kernel
         //
         if ( chCommandLineGetBool ( "global-coalesced", argc, argv ) ) {
-			
-            globalMemCoalescedKernel_Wrapper(grid_dim, block_dim /*TODO Parameters*/);
+
+            globalMemCoalescedKernel_Wrapper(grid_dim, block_dim, d_memoryA, h_memoryA, optMemorySize);
         } else if ( chCommandLineGetBool ( "global-stride", argc, argv ) ) {
-            globalMemStrideKernel_Wrapper(grid_dim, block_dim /*TODO Parameters*/);
+            globalMemStrideKernel_Wrapper(grid_dim, block_dim, d_memoryA, h_memoryA, optMemorySize, optStride);
         } else if ( chCommandLineGetBool ( "global-offset", argc, argv ) ) {
-            globalMemOffsetKernel_Wrapper(grid_dim, block_dim /*TODO Parameters*/);
+            globalMemOffsetKernel_Wrapper(grid_dim, block_dim, d_memoryA, h_memoryA, optMemorySize, optOffset);
         } else {
             break;
         }
